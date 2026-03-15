@@ -11,15 +11,33 @@ fn transfer(
     amount: i64,
 ) -> Result<(), String> {
     thread::sleep(std::time::Duration::from_millis(1));
-    let mut from_guard = bank[from].lock().unwrap();
-    let mut to_guard = bank[to].lock().unwrap();
 
-    if *from_guard < amount {
-        Err("Insufficient funds".to_string())
+    if from == to {
+        return Ok(());
+    };
+
+    let (mut first_lock, mut second_lock) = if from < to {
+        (bank[from].lock().unwrap(), bank[to].lock().unwrap())
     } else {
-        *from_guard -= amount;
-        *to_guard += amount;
-        Ok(())
+        (bank[to].lock().unwrap(), bank[from].lock().unwrap())
+    };
+
+    if from < to {
+        if *first_lock < amount {
+            Err("Insufficient funds".to_string())
+        } else {
+            *first_lock -= amount;
+            *second_lock += amount;
+            Ok(())
+        }
+    } else {
+        if *second_lock < amount {
+            Err("insufficient funds v2".to_string())
+        } else {
+            *second_lock -= amount;
+            *first_lock += amount;
+            Ok(())
+        }
     }
 }
 

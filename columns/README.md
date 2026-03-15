@@ -2,11 +2,20 @@
 
 A potentially-parallel bank. Using this to learn three concepts: shared mutable state with Mutex, model actor concurrency communicating via channels, and maybe tokio async.
 
-## Model 1 — Shared state with Mutex
+## Model 1 - Shared state over entire bank/accounts list
 
-- [x] Set up basic data structures (Bank, Account)
-- [x] Simplify to `Arc<Mutex<Vec<f64>>>` (balances only)
-- [x] Write `transfer(bank, from, to, amount)` — lock, check funds, subtract/add
-- [ ] Spawn 8 threads doing 100 transfers each
-- [ ] Assert total money is conserved after all threads join
-- [ ] Experiment: try locking individual accounts separately, discover deadlocks
+Lock entire "bank" whenever `transfer`. Data structure is `Arc<Mutex<Vec<i64>>>`.
+
+```bash
+Elapsed: 1.027906792s
+Final balances: [148, 4370, 1202, 3841, 439]
+```
+
+## Model 2 - Shared state over accounts
+
+Provision locks/mutex over each individual account. Ensure deterministic locking to prevent deadlocks. Data structure is `Arc<Vec<Mutex<i64>>>`.
+
+```bash
+Elapsed: 127.138917ms
+Final balances: Map { iter: Iter([Mutex { data: 5054, poisoned: false, .. }, Mutex { data: 207, poisoned: false, .. }, Mutex { data: 1076, poisoned: false, .. }, Mutex { data: 1236, poisoned: false, .. }, Mutex { data: 2427, poisoned: false, .. }]) }
+```
