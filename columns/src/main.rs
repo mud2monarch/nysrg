@@ -5,27 +5,42 @@ use std::{
 };
 
 fn transfer(
-    bank: &Arc<Mutex<Vec<i64>>>,
+    bank: &Arc<Vec<Mutex<i64>>>,
     from: usize,
     to: usize,
     amount: i64,
 ) -> Result<(), String> {
-    let mut accounts = bank.lock().unwrap();
     thread::sleep(std::time::Duration::from_millis(1));
-    if accounts[from] < amount {
+    let mut from_guard = bank[from].lock().unwrap();
+    let mut to_guard = bank[to].lock().unwrap();
+
+    if *from_guard < amount {
         Err("Insufficient funds".to_string())
     } else {
-        accounts[from] -= amount;
-        accounts[to] += amount;
+        *from_guard -= amount;
+        *to_guard += amount;
         Ok(())
     }
 }
 
 fn main() -> Result<(), String> {
-    let initial_accounts: Vec<i64> = vec![10000, 0, 0, 0, 0];
-    assert_eq!(initial_accounts.iter().sum::<i64>(), 10000);
+    let initial_accounts: Vec<Mutex<i64>> = vec![
+        Mutex::new(10000),
+        Mutex::new(0),
+        Mutex::new(0),
+        Mutex::new(0),
+        Mutex::new(0),
+    ];
 
-    let bank = Arc::new(Mutex::new(initial_accounts));
+    assert_eq!(
+        initial_accounts
+            .iter()
+            .map(|a| *a.lock().unwrap())
+            .sum::<i64>(),
+        10000
+    );
+
+    let bank = Arc::new(initial_accounts);
     let mut handles = vec![];
     let start = Instant::now();
 
@@ -48,8 +63,11 @@ fn main() -> Result<(), String> {
     }
 
     println!("Elapsed: {:?}", start.elapsed());
-    println!("Final balances: {:?}", bank.lock().unwrap());
-    assert_eq!(bank.lock().unwrap().iter().sum::<i64>(), 10000);
+    println!(
+        "Final balances: {:?}",
+        bank.iter().map(|a| *a.lock().unwrap())
+    );
+    assert_eq!(bank.iter().map(|a| *a.lock().unwrap()).sum::<i64>(), 10000);
 
     Ok(())
 }
